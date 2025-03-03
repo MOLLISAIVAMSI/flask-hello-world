@@ -2,5 +2,7 @@ Flask
 Gunicorn
 Flask-CORS==4.0.0
 openai==0.28
+requests
+gunicorn
 
 
