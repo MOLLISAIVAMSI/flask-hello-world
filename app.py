@@ -1,42 +1,30 @@
 from flask import Flask, jsonify, request
-from flask_cors import CORS
-import openai
-import os
-
-# Retrieve your OpenAI API key and base URL from environment variables
-openai.api_key = os.environ.get("OPENAI_API_KEY")
-openai.api_base = os.environ.get("OPENAI_API_BASE_URL", "https://api.pawan.krd/pai-001-light-beta/v1")
+import requests
 
 app = Flask(__name__)
-CORS(app)
+
+SERVICES = {
+    "app1": "http://localhost:5001",
+    "app2": "http://localhost:5002",
+    "app3": "http://localhost:5003"
+}
 
 @app.route('/')
 def home():
-    return "Welcome to the Chatbot API. Use /api/route to interact with the chatbot."
+    return jsonify({"message": "Flask Gateway Running!"})
 
-@app.route('/api/route', methods=['POST', 'GET'])
-def chatbot():
-    data = request.get_json()
-    user_input = data.get('text', "")
-
-    if not user_input:
-        return jsonify({'response': 'No input provided'}), 400
-
-    response = openai.ChatCompletion.create(
-        model="pai-001-light-beta",
-        messages=[
-            {'role': 'user', 'content': user_input},
-        ],
-        stream=True,
-        allow_fallback=True
-    )
-
-    content_string = ""
-    for chunk in response:
-        content_string += chunk.choices[0].delta.get("content", "")
-
-    response_text = content_string
-    return jsonify({'response': response_text})
+@app.route('/api/<service>', methods=['GET', 'POST'])
+def proxy(service):
+    if service not in SERVICES:
+        return jsonify({"error": "Service not found"}), 404
+    
+    target_url = SERVICES[service] + request.path
+    if request.method == "POST":
+        response = requests.post(target_url, json=request.json)
+    else:
+        response = requests.get(target_url)
+    
+    return response.json()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=10000)  # Gateway runs on port 10000
